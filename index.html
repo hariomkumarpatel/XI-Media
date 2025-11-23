@@ -3,64 +3,36 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>XI Media</title>
+  <title>InstaClone — Feed</title>
+  <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="style.css">
 </head>
-<body>
-  <header class="topbar">
-    <div class="brand">XIMedia</div>
-    <div class="search"><input id="search" placeholder="Search captions or users..."></div>
-    <div class="actions">
-      <button id="btnNew" class="btn">New Post</button>
-      <button id="btnLogin" class="btn ghost">Login / Sign Up</button>
-      <button id="btnLogout" class="btn ghost" style="display:none">Logout</button>
-    </div>
-  </header>
-
-  <main class="container">
-    <aside class="sidebar">
-      <div class="profile-card" id="profileCard">
-        <img id="avatar" src="https://via.placeholder.com/90" alt="avatar">
-        <div>
-          <div id="displayName">Guest</div>
-          <div id="emailText" class="muted">Not signed in</div>
-        </div>
+<body class="bg-slate-900 text-slate-100">
+  <div class="max-w-6xl mx-auto">
+    <header class="flex items-center gap-4 p-4 sticky top-0 bg-black/50 backdrop-blur z-20">
+      <div class="flex items-center gap-3">
+        <img id="siteLogo" src="assets/logo.png" class="w-10 h-10 rounded" alt="logo">
+        <h1 class="text-xl font-semibold">InstaClone</h1>
       </div>
-    </aside>
-
-    <section id="feed" class="feed"></section>
-  </main>
-
-  <!-- Login/Register Modal -->
-  <div id="authModal" class="modal">
-    <div class="panel slide-up">
-      <button id="closeAuth" class="close">✕</button>
-      <h3 id="authTitle">Login</h3>
-      <input id="authEmail" type="email" placeholder="Email" />
-      <input id="authPassword" type="password" placeholder="Password" />
-      <div class="row">
-        <button id="authSubmit" class="btn primary">Submit</button>
-        <button id="switchAuth" class="btn ghost">Switch to Sign up</button>
+      <input id="searchInput" class="ml-6 px-3 py-2 rounded bg-slate-800 placeholder:text-slate-400" placeholder="Search name or userId...">
+      <div class="ml-auto flex items-center gap-2">
+        <button id="btnStories" class="px-3 py-2 rounded bg-rose-500">Story</button>
+        <button id="btnReelUpload" class="px-3 py-2 rounded bg-indigo-600">Upload Reel</button>
+        <button id="btnUpload" class="px-3 py-2 rounded bg-emerald-500">New Post</button>
+        <button id="btnLogin" class="px-3 py-2 rounded border border-slate-700">Login</button>
+        <button id="btnLogout" class="px-3 py-2 rounded border border-slate-700 hidden">Logout</button>
+        <a id="adminLink" class="px-3 py-2 rounded border border-yellow-500 text-yellow-300 hidden" href="admin.html">Admin</a>
       </div>
-      <div id="authInfo" class="muted small"></div>
-    </div>
+    </header>
+
+    <div id="stories" class="flex gap-3 py-4 px-4 overflow-x-auto"></div>
+
+    <main id="feed" class="p-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6"></main>
   </div>
 
-  <!-- Upload Modal -->
-  <div id="uploadModal" class="modal">
-    <div class="panel slide-up">
-      <button id="closeUpload" class="close">✕</button>
-      <h3>Create Post</h3>
-      <input id="fileInput" type="file" accept="image/*" />
-      <textarea id="caption" placeholder="Write a caption... (max 300)"></textarea>
-      <div class="row">
-        <button id="uploadBtn" class="btn primary">Upload</button>
-        <div id="progressWrap" style="flex:1;display:none">
-          <div id="progressBar"></div>
-        </div>
-      </div>
-      <div id="uploadMsg" class="muted small"></div>
-    </div>
+  <div id="reelsViewer" class="fixed inset-0 bg-black z-40 hidden items-center justify-center">
+    <div id="reelsContainer" class="w-full h-full flex overflow-hidden"></div>
+    <button id="closeReels" class="absolute top-6 right-6 text-white bg-black/40 px-3 py-2 rounded">Close</button>
   </div>
 
   <script type="module" src="firebase.js"></script>

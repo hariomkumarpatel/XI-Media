@@ -1,0 +1,31 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <title>Profile</title>
+</head>
+<body class="bg-slate-900 text-slate-100">
+  <div class="max-w-3xl mx-auto p-6">
+    <div class="flex gap-4 items-center">
+      <img id="profilePhoto" src="assets/avatar.png" class="w-24 h-24 rounded" alt="profile">
+      <div>
+        <h2 id="profileName" class="text-2xl font-semibold">Guest</h2>
+        <p id="profileUserId" class="text-slate-400">userId</p>
+      </div>
+      <div class="ml-auto">
+        <button id="editProfileBtn" class="px-3 py-2 rounded bg-indigo-600">Edit</button>
+      </div>
+    </div>
+    <p id="bioText" class="mt-4 text-slate-300">Bio...</p>
+
+    <hr class="my-6">
+
+    <h3 class="text-lg font-semibold">Your posts</h3>
+    <div id="userPosts" class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4"></div>
+  </div>
+
+  <script type="module" src="firebase.js"></script>
+  <script type="module" src="app.js"></script>
+</body>
+</html>

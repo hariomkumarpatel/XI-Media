@@ -1,185 +1,98 @@
-// app.js
-import { auth, db, storage } from "./firebase.js";
-import {
-  createUserWithEmailAndPassword,
-  signInWithEmailAndPassword,
-  onAuthStateChanged,
-  signOut
-} from "https://www.gstatic.com/firebasejs/10.12.3/firebase-auth.js";
+// app.js - simplified full project logic (client-side)
+// NOTE: replace placeholders in firebase.js and enable Firestore/Storage/Auth in your Firebase project.
+import { auth, db, storage } from './firebase.js';
+import { signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged, signOut, sendPasswordResetEmail } from "https://www.gstatic.com/firebasejs/10.12.3/firebase-auth.js";
+import { collection, addDoc, query, orderBy, onSnapshot, doc, getDoc, updateDoc, deleteDoc, getDocs, serverTimestamp, setDoc } from "https://www.gstatic.com/firebasejs/10.12.3/firebase-firestore.js";
+import { ref, uploadBytesResumable, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.12.3/firebase-storage.js";
 
-import {
-  collection,
-  addDoc,
-  serverTimestamp,
-  query,
-  orderBy,
-  onSnapshot,
-  doc,
-  getDoc
-} from "https://www.gstatic.com/firebasejs/10.12.3/firebase-firestore.js";
+const $ = id => document.getElementById(id);
+function E(tag, cls, html){ const d=document.createElement(tag); if(cls) d.className=cls; if(html) d.innerHTML=html; return d; }
+function esc(s){ return s? String(s).replace(/[&<>'\"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])) : ''; }
 
-import {
-  ref,
-  uploadBytesResumable,
-  getDownloadURL
-} from "https://www.gstatic.com/firebasejs/10.12.3/firebase-storage.js";
+// Auth quick prompts
+async function promptLogin(){
+  const email = prompt('Email:'); if(!email) return;
+  const pwd = prompt('Password:'); if(!pwd) return;
+  await signInWithEmailAndPassword(auth, email, pwd);
+}
+$('btnLogin')?.addEventListener('click', promptLogin);
+$('btnLogout')?.addEventListener('click', ()=> signOut(auth));
 
-/* DOM references */
-const btnLogin = document.getElementById('btnLogin');
-const authModal = document.getElementById('authModal');
-const closeAuth = document.getElementById('closeAuth');
-const authTitle = document.getElementById('authTitle');
-const authSubmit = document.getElementById('authSubmit');
-const switchAuth = document.getElementById('switchAuth');
-const authEmail = document.getElementById('authEmail');
-const authPassword = document.getElementById('authPassword');
-const authInfo = document.getElementById('authInfo');
-
-const btnLogout = document.getElementById('btnLogout');
-const btnNew = document.getElementById('btnNew');
-const uploadModal = document.getElementById('uploadModal');
-const closeUpload = document.getElementById('closeUpload');
-const fileInput = document.getElementById('fileInput');
-const captionInput = document.getElementById('caption');
-const uploadBtn = document.getElementById('uploadBtn');
-const progressWrap = document.getElementById('progressWrap');
-const progressBar = document.getElementById('progressBar');
-const uploadMsg = document.getElementById('uploadMsg');
-
-const displayName = document.getElementById('displayName');
-const emailText = document.getElementById('emailText');
-const avatar = document.getElementById('avatar');
-
-const feed = document.getElementById('feed');
-
-let isSignup = false;
-
-/* Auth modal controls */
-btnLogin.addEventListener('click', ()=> { authModal.style.display='flex'; authTitle.textContent='Login'; isSignup=false; authInfo.textContent=''; });
-closeAuth.addEventListener('click', ()=> authModal.style.display='none');
-switchAuth.addEventListener('click', ()=> {
-  isSignup = !isSignup;
-  authTitle.textContent = isSignup ? 'Sign up' : 'Login';
-  switchAuth.textContent = isSignup ? 'Switch to Login' : 'Switch to Sign up';
-});
-
-authSubmit.addEventListener('click', async ()=>{
-  const email = authEmail.value.trim();
-  const pass = authPassword.value;
-  if(!email || !pass) { authInfo.textContent='Enter email & password'; return; }
-  try{
-    if(isSignup){
-      await createUserWithEmailAndPassword(auth, email, pass);
-      authInfo.textContent = 'Account created. You are logged in.';
-      authModal.style.display='none';
-    } else {
-      await signInWithEmailAndPassword(auth, email, pass);
-      authInfo.textContent = 'Logged in.';
-      authModal.style.display='none';
-    }
-    authEmail.value=''; authPassword.value='';
-  }catch(err){
-    authInfo.textContent = err.message;
-  }
-});
-
-/* Upload modal controls */
-btnNew.addEventListener('click', ()=> uploadModal.style.display='flex');
-closeUpload.addEventListener('click', ()=> uploadModal.style.display='none');
-
-uploadBtn.addEventListener('click', async ()=>{
-  const file = fileInput.files[0];
-  const caption = captionInput.value.trim().slice(0,300);
-  if(!file){ uploadMsg.textContent='Choose an image first'; return; }
-  uploadMsg.textContent='Uploading...';
-  progressWrap.style.display='block';
-  const storageRef = ref(storage, `posts/${Date.now()}_${file.name}`);
-  const uploadTask = uploadBytesResumable(storageRef, file);
-
-  uploadTask.on('state_changed',
-    (snapshot) => {
-      const pct = Math.round((snapshot.bytesTransferred / snapshot.totalBytes) * 100);
-      progressBar.style.width = pct + '%';
-    },
-    (error) => {
-      uploadMsg.textContent = 'Upload failed: ' + error.message;
-    },
-    async () => {
-      const url = await getDownloadURL(uploadTask.snapshot.ref);
-      // save post to Firestore
-      await addDoc(collection(db, 'posts'), {
-        image: url,
-        caption: caption,
-        createdAt: serverTimestamp(),
-        uid: auth.currentUser ? auth.currentUser.uid : null,
-        authorEmail: auth.currentUser ? auth.currentUser.email : 'anonymous'
-      });
-      uploadMsg.textContent = 'Posted!';
-      fileInput.value = ''; captionInput.value = '';
-      progressBar.style.width = '0%';
-      progressWrap.style.display='none';
-      setTimeout(()=> uploadModal.style.display='none', 700);
-    }
-  );
-});
-
-/* Logout */
-btnLogout.addEventListener('click', ()=> signOut(auth));
-
-/* Auth state */
-onAuthStateChanged(auth, async (user)=>{
+// Auth state
+onAuthStateChanged(auth, async user => {
   if(user){
-    btnLogin.style.display='none';
-    btnLogout.style.display='inline-block';
-    displayName.textContent = user.displayName || 'User';
-    emailText.textContent = user.email;
-    // if user has a photoURL, show; else placeholder
-    avatar.src = user.photoURL || `https://i.pravatar.cc/150?u=${user.uid}`;
-
+    $('btnLogin') && $('btnLogin').classList.add('hidden');
+    $('btnLogout') && $('btnLogout').classList.remove('hidden');
+    // ensure public profile exists
+    const uref = doc(db,'users',user.uid);
+    const udoc = await getDoc(uref);
+    if(!udoc.exists()){
+      await setDoc(uref, { name: user.displayName||user.email.split('@')[0], userId: user.email.split('@')[0], role:'user', createdAt: serverTimestamp() });
+    }
+    // show admin link if role is admin
+    const profile = (await getDoc(uref)).data();
+    if(profile && profile.role === 'admin') $('adminLink') && $('adminLink').classList.remove('hidden');
   } else {
-    btnLogin.style.display='inline-block';
-    btnLogout.style.display='none';
-    displayName.textContent = 'Guest';
-    emailText.textContent = 'Not signed in';
-    avatar.src = 'https://via.placeholder.com/90';
+    $('btnLogin') && $('btnLogin').classList.remove('hidden');
+    $('btnLogout') && $('btnLogout').classList.add('hidden');
   }
 });
 
-/* Live feed - listens to 'posts' collection ordered by createdAt desc */
-const postsCol = collection(db, 'posts');
-const q = query(postsCol, orderBy('createdAt','desc'));
-onSnapshot(q, snapshot => {
+// Feed realtime
+const feed = $('feed');
+const postsQ = query(collection(db,'posts'), orderBy('createdAt','desc'));
+onSnapshot(postsQ, snap => {
+  if(!feed) return;
   feed.innerHTML = '';
-  snapshot.forEach(docSnap => {
-    const p = docSnap.data();
-    // createdAt can be a timestamp or null right after adding; handle gracefully
-    const timeText = p.createdAt && p.createdAt.toDate ? timeAgo(p.createdAt.toDate()) : '';
-    const el = document.createElement('article');
-    el.className = 'post';
-    el.innerHTML = `
-      <div class="meta">
-        <img src="https://i.pravatar.cc/80?u=${escapeHtml(p.authorEmail||'anon')}" alt="avatar">
-        <div>
-          <strong>${escapeHtml(p.authorEmail || 'anon')}</strong>
-          <div class="muted small">${timeText}</div>
-        </div>
+  snap.forEach(async d => {
+    const p = d.data();
+    const card = E('div','bg-slate-800 rounded shadow overflow-hidden');
+    card.innerHTML = `
+      <div class="p-3 flex items-center gap-3">
+        <img class="w-10 h-10 rounded" src="${esc(p.authorPhoto||'assets/avatar.png')}">
+        <div><div class="font-semibold">${esc(p.authorName||p.authorId||'user')}</div><div class="text-xs text-slate-400">${new Date(p.createdAt?.toMillis? p.createdAt.toMillis(): p.createdAt||0).toLocaleString()}</div></div>
       </div>
-      <img class="content" src="${escapeHtml(p.image)}" alt="post image">
-      <div class="caption">${escapeHtml(p.caption||'')}</div>
+      <img src="${esc(p.image)}" class="w-full object-cover h-64">
+      <div class="p-3"><div class="text-slate-200">${esc(p.caption)}</div></div>
     `;
-    feed.appendChild(el);
+    feed.appendChild(card);
   });
 });
 
-/* Utils */
-function escapeHtml(s){
-  if(!s) return '';
-  return String(s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-}
-function timeAgo(d){
-  const diff = (Date.now() - d.getTime())/1000;
-  if(diff < 60) return `${Math.floor(diff)}s`;
-  if(diff < 3600) return `${Math.floor(diff/60)}m`;
-  if(diff < 86400) return `${Math.floor(diff/3600)}h`;
-  return `${Math.floor(diff/86400)}d`;
-}
+// Upload post (simple flow asking for image URL or upload)
+$('btnUpload')?.addEventListener('click', async ()=>{
+  const user = auth.currentUser; if(!user) return alert('Login first');
+  const mode = prompt('Type UPLOAD to upload local file, or URL to paste an image URL');
+  if(!mode) return;
+  if(mode === 'UPLOAD'){
+    const inp = document.createElement('input'); inp.type='file'; inp.accept='image/*';
+    inp.onchange = async e => {
+      const f = e.target.files[0]; const path = `posts/${user.uid}/${Date.now()}_${f.name}`; const sref = ref(storage, path);
+      const task = uploadBytesResumable(sref, f);
+      task.on('state_changed', null, err => alert(err.message), async ()=> {
+        const url = await getDownloadURL(task.snapshot.ref);
+        const udoc = (await getDoc(doc(db,'users',user.uid))).data();
+        await addDoc(collection(db,'posts'), { uid: user.uid, image: url, caption: prompt('Caption?')||'', createdAt: serverTimestamp(), authorName: udoc.name, authorId: udoc.userId });
+        alert('Posted');
+      });
+    };
+    inp.click(); return;
+  } else {
+    const url = mode;
+    const udoc = (await getDoc(doc(db,'users',user.uid))).data();
+    await addDoc(collection(db,'posts'), { uid: user.uid, image: url, caption: prompt('Caption?')||'', createdAt: serverTimestamp(), authorName: udoc.name, authorId: udoc.userId });
+    alert('Posted');
+  }
+});
+
+// stories simple listener
+onSnapshot(collection(db,'stories'), snap => {
+  const sEl = $('stories'); if(!sEl) return; sEl.innerHTML = '';
+  const now = Date.now();
+  snap.forEach(d => {
+    const s = d.data();
+    if(now - s.createdAt > 24*60*60*1000) return;
+    const item = E('div','flex flex-col items-center w-20'); item.innerHTML = `<img class="w-16 h-16 rounded-full border-2 border-rose-400 object-cover" src="${esc(s.image)}"><div class="text-xs mt-1">${esc(s.authorId||s.uid)}</div>`; sEl.appendChild(item);
+    item.onclick = ()=> window.open(s.image,'_blank');
+  });
+});

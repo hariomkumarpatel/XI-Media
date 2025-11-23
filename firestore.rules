@@ -1,0 +1,43 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /users/{uid} {
+      allow read: if true;
+      allow create: if request.auth != null && request.auth.uid == uid;
+      allow update: if request.auth != null && request.auth.uid == uid && !(request.resource.data.role is string && request.resource.data.role != resource.data.role);
+      allow delete: if request.auth != null && request.auth.token.admin == true;
+    }
+    match /posts/{postId} {
+      allow read: if true;
+      allow create: if request.auth != null && request.auth.uid == request.resource.data.uid;
+      allow update: if request.auth != null && request.auth.uid == resource.data.uid;
+      allow delete: if request.auth != null && (request.auth.uid == resource.data.uid || request.auth.token.admin == true);
+    }
+    match /stories/{sId} {
+      allow read: if true;
+      allow create: if request.auth != null && request.auth.uid == request.resource.data.uid;
+      allow delete: if request.auth != null && (request.auth.uid == resource.data.uid || request.auth.token.admin == true);
+    }
+    match /reels/{rId} {
+      allow read: if true;
+      allow create: if request.auth != null && request.auth.uid == request.resource.data.uid;
+      allow delete: if request.auth != null && (request.auth.uid == resource.data.uid || request.auth.token.admin == true);
+    }
+    match /notifications/{nid} {
+      allow create: if request.auth != null;
+      allow read: if request.auth != null && request.auth.uid == resource.data.to;
+      allow update: if request.auth != null && request.auth.uid == resource.data.to;
+      allow delete: if request.auth != null && request.auth.token.admin == true;
+    }
+    match /site/{doc} {
+      allow read: if true;
+      allow write: if request.auth != null && request.auth.token.admin == true;
+    }
+    match /calls/{callId} {
+      allow read, write: if request.auth != null;
+    }
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
