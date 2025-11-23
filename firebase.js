@@ -9,8 +9,8 @@ const firebaseConfig = {
   authDomain: "hdp-tubee.firebaseapp.com",
   projectId: "hdp-tubee",
   storageBucket: "hdp-tubee.appspot.com",
-  messagingSenderId: "YOUR_SENDER_ID",
-  appId: "YOUR_APP_ID"
+  messagingSenderId: "1014108236174",
+  appId: "1:1014108236174:android:a6bc36a3336a203deddcdf"
 };
 
 export const app = initializeApp(firebaseConfig);
